@@ -1,0 +1,4 @@
+RewriteEngine On
+RewriteBase /
+RewriteRule ^realms/([^/]+)/\.well-known/openid-configuration$ issuer/index.php [L,QSA]
+RewriteRule ^realms/([^/]+)/protocol/openid-connect/(.*)$ issuer/index.php [L,QSA]

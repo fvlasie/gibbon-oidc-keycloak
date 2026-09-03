@@ -1,0 +1,6 @@
+Gibbon OIDC Server
+==================
+
+v1.0.00
+-------
+Initial release: Keycloak-shaped OIDC issuer inside Gibbon, Gibbon users and roles as the identity source.
