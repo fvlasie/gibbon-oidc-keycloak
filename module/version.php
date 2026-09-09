@@ -2,4 +2,4 @@
 /**
  * Gibbon OIDC Server module
  */
-$moduleVersion = '1.0.00';
+$moduleVersion = '1.0.01';

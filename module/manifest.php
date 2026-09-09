@@ -5,18 +5,25 @@ $description = 'Keycloak-shaped OpenID Connect issuer using Gibbon accounts, rol
 $entryURL = 'realm_manage.php';
 $type = 'Additional';
 $category = 'Admin';
-$version = '1.0.00';
+$version = '1.0.01';
 $author = 'Gibbon OIDC Server';
 $url = 'https://gibbonedu.org';
 
 $moduleTables = [];
+$schemaPath = __DIR__.'/issuer/schema.mysql.sql';
+if (is_file($schemaPath)) {
+    $schema = preg_replace('/^--.*$/m', '', (string) file_get_contents($schemaPath)) ?? '';
+    foreach (preg_split('/;\s*/', $schema) as $sql) {
+        $sql = trim($sql);
+        if ($sql === '') {
+            continue;
+        }
+        $moduleTables[] = preg_replace('/^CREATE TABLE IF NOT EXISTS/i', 'CREATE TABLE', $sql);
+    }
+}
+$moduleTables[] = "INSERT INTO oidcRealm (name, issuerUrl, accessTtl, idTtl, refreshTtl) VALUES ('gibbon', CONCAT(TRIM(TRAILING '/' FROM COALESCE((SELECT value FROM gibbonSetting WHERE scope='System' AND name='absoluteURL' LIMIT 1), '')), '/realms/gibbon'), 300, 300, 2592000)";
 
 $gibbonSetting = [];
-
-// Seed realm only. Register each relying party under Manage Clients.
-$sqlExtra = [];
-
-$sqlExtra[] = "INSERT INTO oidcRealm (name, issuerUrl, accessTtl, idTtl, refreshTtl) VALUES ('gibbon', CONCAT(TRIM(TRAILING '/' FROM COALESCE((SELECT value FROM gibbonSetting WHERE scope='System' AND name='absoluteURL' LIMIT 1), '')), '/'), '/realms/gibbon'), 300, 300, 2592000)";
 
 $actionRows[] = [
     'name'                      => 'Manage Realm',

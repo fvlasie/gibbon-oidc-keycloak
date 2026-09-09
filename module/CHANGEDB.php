@@ -93,3 +93,16 @@ $sql[$count][1] = "CREATE TABLE IF NOT EXISTS `oidcSession` (
   `expires` int unsigned NOT NULL,
   PRIMARY KEY (`sessionId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+
+$count++;
+$sql[$count][0] = '1.0.01';
+$oidcSchema = preg_replace('/^--.*$/m', '', (string) file_get_contents(__DIR__.'/issuer/schema.mysql.sql')) ?? '';
+$oidcParts = [];
+foreach (preg_split('/;\s*/', $oidcSchema) as $stmt) {
+    $stmt = trim($stmt);
+    if ($stmt !== '') {
+        $oidcParts[] = $stmt;
+    }
+}
+$oidcParts[] = "INSERT IGNORE INTO oidcRealm (name, issuerUrl, accessTtl, idTtl, refreshTtl) VALUES ('gibbon', CONCAT(TRIM(TRAILING '/' FROM COALESCE((SELECT value FROM gibbonSetting WHERE scope='System' AND name='absoluteURL' LIMIT 1), '')), '/realms/gibbon'), 300, 300, 2592000)";
+$sql[$count][1] = implode(";end\n", $oidcParts).';end';

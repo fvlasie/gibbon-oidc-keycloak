@@ -32,6 +32,20 @@ class Store
         return new self(new PDO($dsn, $user, $password));
     }
 
+    public function ensureMysqlSchema(string $realmName, string $issuerUrl): void
+    {
+        $schema = (string) file_get_contents(__DIR__.'/../schema.mysql.sql');
+        $schema = preg_replace('/^--.*$/m', '', $schema) ?? $schema;
+        foreach (preg_split('/;\s*/', $schema) as $sql) {
+            $sql = trim($sql);
+            if ($sql !== '') {
+                $this->pdo->exec($sql);
+            }
+        }
+        $stmt = $this->pdo->prepare('INSERT IGNORE INTO oidcRealm (name, issuerUrl, accessTtl, idTtl, refreshTtl) VALUES (?, ?, 300, 300, 2592000)');
+        $stmt->execute([$realmName, rtrim($issuerUrl, '/')]);
+    }
+
     public function pdo(): PDO
     {
         return $this->pdo;

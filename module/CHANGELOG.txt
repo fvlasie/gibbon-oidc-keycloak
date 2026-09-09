@@ -1,6 +1,10 @@
 Gibbon OIDC Server
 ==================
 
+v1.0.01
+-------
+Create oidc tables on Gibbon module install (and repair them if the issuer is hit first).
+
 v1.0.00
 -------
 Initial release: Keycloak-shaped OIDC issuer inside Gibbon, using Gibbon users and roles as the identity source. Register any compatible client and map Gibbon roles to standard claims.

@@ -12,9 +12,11 @@ Copy [`module/`](module/) into Gibbon as:
 <gibbon>/modules/OIDC Server/
 ```
 
-Then install **OIDC Server** in System Admin → Manage Modules.
+Then install **OIDC Server** in System Admin → Manage Modules. That is what creates the `oidc*` tables (copying files into `modules/` is not enough).
 
-That creates the `oidc*` tables and seeds realm `gibbon`. Clients are not pre-registered: add each application under **Manage Clients**.
+If the module is already listed as installed but the tables are missing, use **Update** to 1.0.01, or hit the issuer once so it can create them.
+
+Clients are not pre-registered: add each application under **Manage Clients**.
 
 ## One web-server rewrite
 

@@ -24,6 +24,16 @@ function boot(): Issuer
             $databaseUsername,
             $databasePassword
         );
+        $store->ensureMysqlSchema($realm, $publicOrigin.$basePath.'/realms/'.$realm);
+        if (!$store->getActiveKey()) {
+            $key = Jwt::generateKey();
+            $store->saveKey($key);
+            $realmRow = $store->getRealm($realm);
+            if ($realmRow) {
+                $realmRow['activeKeyKid'] = $key['kid'];
+                $store->upsertRealm($realmRow);
+            }
+        }
     } else {
         $sqlite = getenv('OIDC_SQLITE') ?: dirname(__DIR__, 2).'/var/oidc.sqlite';
         $store = Store::sqlite($sqlite);
