@@ -1,6 +1,6 @@
 # Gibbon OIDC Server
 
-A Gibbon module that turns your Gibbon site into a **Keycloak-shaped OpenID Connect issuer**. School accounts (`gibbonPerson`) and roles (`gibbonRole`) are the identity source. OpenCloud and other OIDC clients can sign users in with the same usernames and passwords they already use in Gibbon.
+A Gibbon module that turns your Gibbon site into a **Keycloak-shaped OpenID Connect issuer**. School accounts (`gibbonPerson`) and roles (`gibbonRole`) are the identity source. Any client that can talk to Keycloak’s OIDC endpoints can sign users in with the same usernames and passwords they already use in Gibbon.
 
 There is no second service. The issuer is PHP inside the module and runs on the same PHP-FPM and MySQL as Gibbon.
 
@@ -14,7 +14,7 @@ Copy [`module/`](module/) into Gibbon as:
 
 Then install **OIDC Server** in System Admin → Manage Modules.
 
-That creates the `oidc*` tables, seeds realm `gibbon`, and registers public clients `web`, `OpenCloudDesktop`, `OpenCloudAndroid`, and `OpenCloudIOS`.
+That creates the `oidc*` tables and seeds realm `gibbon`. Clients are not pre-registered: add each application under **Manage Clients**.
 
 ## One web-server rewrite
 
@@ -28,6 +28,35 @@ Add the snippet from [`deploy/nginx-realms.conf`](deploy/nginx-realms.conf) or [
 
 Set **Issuer URL** in OIDC Server → Manage Realm to that exact origin (including `https`).
 
+## Connect any Keycloak-compatible app
+
+In the application, set the issuer / authority to the discovery URL’s issuer (no trailing slash):
+
+```text
+https://school.example/realms/gibbon
+```
+
+Typical Keycloak paths this module implements:
+
+| Use | Path |
+|---|---|
+| Discovery | `{issuer}/.well-known/openid-configuration` |
+| Authorization | `{issuer}/protocol/openid-connect/auth` |
+| Token | `{issuer}/protocol/openid-connect/token` |
+| UserInfo | `{issuer}/protocol/openid-connect/userinfo` |
+| JWKS | `{issuer}/protocol/openid-connect/certs` |
+| Logout | `{issuer}/protocol/openid-connect/logout` |
+| Revoke | `{issuer}/protocol/openid-connect/revoke` |
+
+In **Manage Clients**, create a client whose `client_id` matches the app:
+
+- **Public + PKCE** for SPAs and native apps (no secret).
+- **Confidential** for server-side apps (`client_secret_post` or HTTP Basic).
+
+Add every redirect URI the app will use, one per line (exact match).
+
+Supported grants: `authorization_code`, `refresh_token`. Signing: RS256. Only people with Gibbon `status = Full` can sign in.
+
 ## Gibbon metadata in tokens
 
 On every login the issuer reads:
@@ -38,28 +67,9 @@ On every login the issuer reads:
 | `username` | `preferred_username` |
 | `email`, names | `email`, `name`, `given_name`, `family_name` |
 | `gibbonRoleIDPrimary` + `gibbonRoleIDAll` | `realm_access.roles` (Gibbon role names) |
-| Manage Claims mappings | `roles` (OpenCloud) and `resource_access` |
+| Manage Claims mappings | optional `roles` array and `resource_access` |
 
-Only people with `status = Full` can sign in.
-
-Keycloak-ish access-token claims also include `azp`, `typ=Bearer`, `sid`, `session_state`, and `acr`.
-
-## OpenCloud
-
-```bash
-OC_OIDC_ISSUER=https://school.example/realms/gibbon
-OC_EXCLUDE_RUN_SERVICES=idp
-PROXY_OIDC_ACCESS_TOKEN_VERIFY_METHOD=jwt
-PROXY_OIDC_REWRITE_WELLKNOWN=true
-PROXY_USER_OIDC_CLAIM=sub
-PROXY_ROLE_ASSIGNMENT_DRIVER=oidc
-WEBFINGER_WEB_OIDC_CLIENT_ID=web
-WEBFINGER_DESKTOP_OIDC_CLIENT_ID=OpenCloudDesktop
-WEBFINGER_ANDROID_OIDC_CLIENT_ID=OpenCloudAndroid
-WEBFINGER_IOS_OIDC_CLIENT_ID=OpenCloudIOS
-```
-
-Add each OpenCloud redirect URI on the matching client (Manage Clients). Public clients + PKCE only; no client secret.
+Keycloak-ish access-token claims also include `azp`, `typ=Bearer`, `sid`, `session_state`, and `acr`. Point the app at `sub`, `preferred_username`, `realm_access.roles`, or the flat `roles` claim, depending on what it expects.
 
 ## Standalone preview (this repo)
 

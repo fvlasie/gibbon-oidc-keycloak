@@ -46,7 +46,7 @@ $key = oidcServerEnsureKey($store);
 
 $page->breadcrumbs->add(__('OIDC Realm'));
 
-echo '<p>'.__('This module is the OpenID Connect issuer for this Gibbon site. Point OpenCloud or another Keycloak-shaped client at the discovery URL after you add the web-server rewrite for /realms/.').'</p>';
+echo '<p>'.__('This module is the OpenID Connect issuer for this Gibbon site. Point any Keycloak-compatible client at the discovery URL after you add the web-server rewrite for /realms/. Register each app under Manage Clients.').'</p>';
 
 $discovery = htmlspecialchars($realm['issuerUrl'].'/.well-known/openid-configuration', ENT_QUOTES);
 echo '<p><strong>'.__('Discovery URL').':</strong> <code>'.$discovery.'</code></p>';
@@ -54,7 +54,7 @@ echo '<p><strong>'.__('Active signing key').':</strong> <code>'.htmlspecialchars
 
 $form = Form::create('realm', $session->get('absoluteURL').'/index.php?q=/modules/OIDC Server/realm_manage.php');
 $form->addHiddenValue('address', $_GET['q'] ?? '');
-$form->addRow()->addLabel('issuerUrl', __('Issuer URL'))->description(__('Must match OC_OIDC_ISSUER exactly, including https.'));
+$form->addRow()->addLabel('issuerUrl', __('Issuer URL'))->description(__('Must match the application’s issuer / authority URL exactly, including https.'));
 $form->addRow()->addTextField('issuerUrl')->required()->setValue($realm['issuerUrl']);
 $form->addRow()->addLabel('accessTtl', __('Access token lifetime (seconds)'));
 $form->addRow()->addNumber('accessTtl')->required()->setValue($realm['accessTtl']);

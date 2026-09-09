@@ -27,7 +27,7 @@ if (!empty($_POST['clientId'])) {
 }
 
 $page->breadcrumbs->add(__('OIDC Clients'));
-echo '<p>'.__('OpenCloud public clients are seeded as web, OpenCloudDesktop, OpenCloudAndroid, and OpenCloudIOS. Add every redirect URI the app will use, one per line.').'</p>';
+echo '<p>'.__('Register each Keycloak-compatible application as a client. Use the same client ID the app expects, and list every redirect URI exactly, one per line. Public clients should use PKCE. Confidential clients need a secret (client_secret_post or HTTP Basic).').'</p>';
 
 $clients = $store->listClients();
 if ($clients === []) {
@@ -42,9 +42,9 @@ if ($clients === []) {
 
 $form = Form::create('client', $session->get('absoluteURL').'/index.php?q=/modules/OIDC Server/clients_manage.php');
 $form->addHiddenValue('address', $_GET['q'] ?? '');
-$form->addRow()->addLabel('clientId', __('Client ID'));
+$form->addRow()->addLabel('clientId', __('Client ID'))->description(__('Must match the application OIDC client_id (create a new row or overwrite an existing ID).'));
 $form->addRow()->addTextField('clientId')->required();
-$form->addRow()->addCheckbox('public')->description(__('Public client (no secret; required for OpenCloud)'))->checked(true);
+$form->addRow()->addCheckbox('public')->description(__('Public client (no secret; typical for SPAs and native apps with PKCE)'))->checked(true);
 $form->addRow()->addCheckbox('pkceRequired')->description(__('Require PKCE'))->checked(true);
 $form->addRow()->addLabel('redirectUris', __('Redirect URIs'))->description(__('One URI per line; must match exactly.'));
 $form->addRow()->addTextArea('redirectUris')->required()->setRows(5);
@@ -52,6 +52,8 @@ $form->addRow()->addLabel('postLogoutUris', __('Post-logout redirect URIs'));
 $form->addRow()->addTextArea('postLogoutUris')->setRows(3);
 $form->addRow()->addLabel('allowedScopes', __('Allowed scopes'));
 $form->addRow()->addTextField('allowedScopes')->setValue('openid profile email offline_access roles');
+$form->addRow()->addLabel('allowedOrigins', __('Allowed origins'))->description(__('CORS / allowed-origins claim. Use * or one origin per line.'));
+$form->addRow()->addTextArea('allowedOrigins')->setValue('*')->setRows(2);
 $form->addRow()->addLabel('clientSecret', __('Client secret'))->description(__('Only for confidential clients. Leave blank to keep the existing secret.'));
 $form->addRow()->addPassword('clientSecret');
 $form->addRow()->addSubmit();

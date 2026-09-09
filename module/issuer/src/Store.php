@@ -135,6 +135,9 @@ class Store
             $client['clientId'],
         ];
         if ($existing) {
+            if (empty($client['clientSecretHash'])) {
+                $fields[0] = $existing['clientSecretHash'];
+            }
             $stmt = $this->pdo->prepare('UPDATE oidcClient SET clientSecretHash=?, public=?, redirectUris=?, postLogoutUris=?, allowedScopes=?, pkceRequired=?, allowedOrigins=? WHERE clientId=?');
             $stmt->execute($fields);
             return;
@@ -151,12 +154,12 @@ class Store
     public function replaceClaimMaps(array $maps): void
     {
         $this->pdo->exec('DELETE FROM oidcClaimMap');
-        $stmt = $this->pdo->prepare('INSERT INTO oidcClaimMap (gibbonRoleID, realmRole, opencloudRole, clientId, clientRole) VALUES (?,?,?,?,?)');
+        $stmt = $this->pdo->prepare('INSERT INTO oidcClaimMap (gibbonRoleID, realmRole, rolesClaim, clientId, clientRole) VALUES (?,?,?,?,?)');
         foreach ($maps as $map) {
             $stmt->execute([
                 $map['gibbonRoleID'],
                 $map['realmRole'],
-                $map['opencloudRole'] ?? null,
+                $map['rolesClaim'] ?? null,
                 $map['clientId'] ?? null,
                 $map['clientRole'] ?? null,
             ]);
@@ -315,19 +318,16 @@ class Store
         ]);
 
         $origin = preg_replace('#/realms/[^/]+$#', '', $issuerUrl);
-        foreach (['web', 'OpenCloudDesktop', 'OpenCloudAndroid', 'OpenCloudIOS', 'test-rp'] as $id) {
+        $testRpRedirects = implode("\n", [
+            $origin.'/test-rp.html',
+            $origin.'/test-rp',
+            $issuerUrl.'/test-rp.html',
+        ]);
+        foreach (['web', 'test-rp'] as $id) {
             $this->upsertClient([
                 'clientId' => $id,
                 'public' => 'Y',
-                'redirectUris' => implode("\n", [
-                    $origin.'/test-rp.html',
-                    $origin.'/test-rp',
-                    $issuerUrl.'/test-rp.html',
-                    'http://127.0.0.1:9200/oidc-callback.html',
-                    'http://localhost:9200/oidc-callback.html',
-                    'oc://android',
-                    'oc://ios',
-                ]),
+                'redirectUris' => $testRpRedirects,
                 'postLogoutUris' => $origin.'/test-rp.html',
                 'allowedOrigins' => '*',
                 'pkceRequired' => 'Y',
@@ -347,9 +347,9 @@ class Store
         $stmt->execute([4, 'leftuser', $hash, 'left@school.example', 'Lea', 'Left', 'Lea Left', 'Left', 3, '3']);
 
         $this->replaceClaimMaps([
-            ['gibbonRoleID' => 1, 'realmRole' => 'Administrator', 'opencloudRole' => 'opencloudAdmin', 'clientId' => 'web', 'clientRole' => 'admin'],
-            ['gibbonRoleID' => 2, 'realmRole' => 'Teacher', 'opencloudRole' => 'opencloudUser', 'clientId' => 'web', 'clientRole' => 'user'],
-            ['gibbonRoleID' => 3, 'realmRole' => 'Student', 'opencloudRole' => 'opencloudGuest', 'clientId' => 'web', 'clientRole' => 'guest'],
+            ['gibbonRoleID' => 1, 'realmRole' => 'Administrator', 'rolesClaim' => 'admin', 'clientId' => 'web', 'clientRole' => 'admin'],
+            ['gibbonRoleID' => 2, 'realmRole' => 'Teacher', 'rolesClaim' => 'user', 'clientId' => 'web', 'clientRole' => 'user'],
+            ['gibbonRoleID' => 3, 'realmRole' => 'Student', 'rolesClaim' => 'guest', 'clientId' => 'web', 'clientRole' => 'guest'],
         ]);
     }
 }

@@ -47,7 +47,7 @@ $payload = [
     'typ' => 'Bearer',
     'preferred_username' => 'admin',
     'realm_access' => ['roles' => ['Administrator']],
-    'roles' => ['opencloudAdmin'],
+    'roles' => ['admin'],
 ];
 $jwt = Jwt::sign($payload, $key['privatePem'], $key['kid']);
 $verified = Jwt::verify($jwt, $key['publicJwk']);

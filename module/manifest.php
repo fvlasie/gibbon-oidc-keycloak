@@ -13,17 +13,10 @@ $moduleTables = [];
 
 $gibbonSetting = [];
 
-// Seed realm + OpenCloud public clients after tables exist (install.php runs extra SQL from $sqlExtra if present)
+// Seed realm only. Register each relying party under Manage Clients.
 $sqlExtra = [];
 
-$absoluteURL = $absoluteURL ?? '';
-
 $sqlExtra[] = "INSERT INTO oidcRealm (name, issuerUrl, accessTtl, idTtl, refreshTtl) VALUES ('gibbon', CONCAT(TRIM(TRAILING '/' FROM COALESCE((SELECT value FROM gibbonSetting WHERE scope='System' AND name='absoluteURL' LIMIT 1), '')), '/'), '/realms/gibbon'), 300, 300, 2592000)";
-
-$openCloudRedirects = "oc://android\noc://ios\nhttp://127.0.0.1:9200/oidc-callback.html";
-foreach (['web', 'OpenCloudDesktop', 'OpenCloudAndroid', 'OpenCloudIOS'] as $clientId) {
-    $sqlExtra[] = "INSERT INTO oidcClient (clientId, public, redirectUris, allowedScopes, pkceRequired, allowedOrigins) VALUES ('".$clientId."', 'Y', '".$openCloudRedirects."', 'openid profile email offline_access roles', 'Y', '*')";
-}
 
 $actionRows[] = [
     'name'                      => 'Manage Realm',
@@ -47,7 +40,7 @@ $actionRows[] = [
     'name'                      => 'Manage Clients',
     'precedence'                => '0',
     'category'                  => 'OIDC',
-    'description'               => 'Register OIDC / OpenCloud clients and redirect URIs.',
+    'description'               => 'Register Keycloak-compatible OIDC clients and redirect URIs.',
     'URLList'                   => 'clients_manage.php',
     'entryURL'                  => 'clients_manage.php',
     'defaultPermissionAdmin'    => 'Y',
@@ -65,7 +58,7 @@ $actionRows[] = [
     'name'                      => 'Manage Claims',
     'precedence'                => '0',
     'category'                  => 'OIDC',
-    'description'               => 'Map Gibbon roles to Keycloak realm roles and OpenCloud role claims.',
+    'description'               => 'Map Gibbon roles to Keycloak realm_access, roles, and resource_access claims.',
     'URLList'                   => 'claims_manage.php',
     'entryURL'                  => 'claims_manage.php',
     'defaultPermissionAdmin'    => 'Y',
@@ -80,5 +73,5 @@ $actionRows[] = [
 ];
 
 __($guid ?? '', 'Configure the issuer URL, token lifetimes, and signing keys.');
-__($guid ?? '', 'Register OIDC / OpenCloud clients and redirect URIs.');
-__($guid ?? '', 'Map Gibbon roles to Keycloak realm roles and OpenCloud role claims.');
+__($guid ?? '', 'Register Keycloak-compatible OIDC clients and redirect URIs.');
+__($guid ?? '', 'Map Gibbon roles to Keycloak realm_access, roles, and resource_access claims.');

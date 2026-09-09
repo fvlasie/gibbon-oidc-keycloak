@@ -334,7 +334,7 @@ class Issuer
         $roles = $this->store->rolesForUser($user);
         $maps = $this->store->listClaimMaps();
         $realmRoles = [];
-        $opencloud = [];
+        $rolesClaim = [];
         $resource = [];
         foreach ($roles as $role) {
             $realmRoles[] = $role['name'];
@@ -345,8 +345,9 @@ class Issuer
                 if (!empty($map['realmRole'])) {
                     $realmRoles[] = $map['realmRole'];
                 }
-                if (!empty($map['opencloudRole'])) {
-                    $opencloud[] = $map['opencloudRole'];
+                $extra = $map['rolesClaim'] ?? '';
+                if ($extra !== '') {
+                    $rolesClaim[] = $extra;
                 }
                 if (!empty($map['clientId']) && !empty($map['clientRole'])) {
                     $resource[$map['clientId']]['roles'][] = $map['clientRole'];
@@ -354,7 +355,7 @@ class Issuer
             }
         }
         $realmRoles = array_values(array_unique($realmRoles));
-        $opencloud = array_values(array_unique($opencloud));
+        $rolesClaim = array_values(array_unique($rolesClaim));
 
         return [
             'sub' => (string) (int) $user['gibbonPersonID'],
@@ -364,7 +365,7 @@ class Issuer
             'given_name' => $user['firstName'] ?? null,
             'family_name' => $user['surname'] ?? null,
             'name' => $user['officialName'] ?: trim(($user['firstName'] ?? '').' '.($user['surname'] ?? '')),
-            'roles' => $opencloud ?: $realmRoles,
+            'roles' => $rolesClaim ?: $realmRoles,
             'realm_access' => ['roles' => $realmRoles],
             'resource_access' => $resource,
         ];
@@ -436,7 +437,7 @@ class Issuer
 <p>Keycloak-shaped issuer for Gibbon accounts.</p>
 <ul>
   <li>Discovery: <a href="{$iss}/.well-known/openid-configuration">{$iss}/.well-known/openid-configuration</a></li>
-  <li>Test client: <a href="{$this->basePath}/test-rp.html">OpenCloud-style PKCE login</a></li>
+  <li>Test client: <a href="{$this->basePath}/test-rp.html">PKCE authorization-code login</a></li>
 </ul>
 <p>Demo accounts (standalone): <code>admin</code>, <code>teacher</code>, <code>student</code> / <code>changeme</code></p>
 HTML);

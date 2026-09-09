@@ -51,7 +51,7 @@ $sql[$count][1] = "CREATE TABLE IF NOT EXISTS `oidcClaimMap` (
   `oidcClaimMapID` int(10) unsigned zerofill NOT NULL AUTO_INCREMENT,
   `gibbonRoleID` int(3) unsigned zerofill NOT NULL,
   `realmRole` varchar(128) NOT NULL,
-  `opencloudRole` varchar(128) DEFAULT NULL,
+  `rolesClaim` varchar(128) DEFAULT NULL,
   `clientId` varchar(128) DEFAULT NULL,
   `clientRole` varchar(128) DEFAULT NULL,
   PRIMARY KEY (`oidcClaimMapID`)

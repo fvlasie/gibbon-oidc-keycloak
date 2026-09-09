@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS oidcClaimMap (
   oidcClaimMapID INTEGER PRIMARY KEY AUTOINCREMENT,
   gibbonRoleID INTEGER NOT NULL,
   realmRole TEXT NOT NULL,
-  opencloudRole TEXT,
+  rolesClaim TEXT,
   clientId TEXT,
   clientRole TEXT
 );
