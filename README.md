@@ -6,13 +6,13 @@ There is no second service. The issuer is PHP inside the module and runs on the 
 
 ## What you install
 
-Copy [`module/`](module/) into Gibbon as:
+This repository **is** the module. Clone or copy it to:
 
 ```text
 <gibbon>/modules/OIDC Server/
 ```
 
-Then install **OIDC Server** in System Admin → Manage Modules. That is what creates the `oidc*` tables (copying files into `modules/` is not enough).
+Then install **OIDC Server** in System Admin → Manage Modules. That creates the `oidc*` tables (copying files into `modules/` is not enough).
 
 If the module is already listed as installed but the tables are missing, use **Update** to 1.0.01, or hit the issuer once so it can create them.
 
@@ -26,19 +26,36 @@ Gibbon cannot own `/.well-known` through a module hook. Keycloak-compatible apps
 https://school.example/realms/gibbon/.well-known/openid-configuration
 ```
 
-Add the snippet from [`deploy/nginx-realms.conf`](deploy/nginx-realms.conf) or [`deploy/apache-realms.conf`](deploy/apache-realms.conf) so `/realms/` is handled by `modules/OIDC Server/issuer/index.php`.
+Point `/realms/` at `modules/OIDC Server/issuer/index.php`. Set **Issuer URL** in OIDC Server → Manage Realm to that origin (including `https`, no trailing slash).
 
-Set **Issuer URL** in OIDC Server → Manage Realm to that exact origin (including `https`).
+**Apache** (`<VirtualHost>` — the pattern includes the leading slash):
+
+```apache
+RewriteEngine On
+# DocumentRoot is the parent of /c/ (Gibbon at https://host/c/):
+RewriteRule ^/realms/ /c/modules/OIDC\ Server/issuer/index.php [PT,L,QSA,E=OIDC_REQUEST_URI:%{REQUEST_URI}]
+
+# DocumentRoot is already the Gibbon folder:
+# RewriteRule ^/realms/ /modules/OIDC\ Server/issuer/index.php [PT,L,QSA,E=OIDC_REQUEST_URI:%{REQUEST_URI}]
+```
+
+**nginx** (same `server_name` as Gibbon):
+
+```nginx
+location /realms/ {
+    rewrite ^ /c/modules/OIDC%20Server/issuer/index.php last;
+}
+```
+
+If nginx `root` is already the Gibbon directory, drop the `/c` prefix.
 
 ## Connect any Keycloak-compatible app
 
-In the application, set the issuer / authority to the discovery URL’s issuer (no trailing slash):
+In the application, set the issuer / authority to:
 
 ```text
 https://school.example/realms/gibbon
 ```
-
-Typical Keycloak paths this module implements:
 
 | Use | Path |
 |---|---|
@@ -61,8 +78,6 @@ Supported grants: `authorization_code`, `refresh_token`. Signing: RS256. Only pe
 
 ## Gibbon metadata in tokens
 
-On every login the issuer reads:
-
 | Gibbon field | Token / UserInfo |
 |---|---|
 | `gibbonPersonID` | `sub` (stable) |
@@ -73,21 +88,17 @@ On every login the issuer reads:
 
 Keycloak-ish access-token claims also include `azp`, `typ=Bearer`, `sid`, `session_state`, and `acr`. Point the app at `sub`, `preferred_username`, `realm_access.roles`, or the flat `roles` claim, depending on what it expects.
 
-## Standalone preview (this repo)
+## Standalone preview
 
 No Gibbon install is required to try the protocol:
 
 ```bash
 export OIDC_STANDALONE=1
 export OIDC_PUBLIC_ORIGIN=http://127.0.0.1:43180
-php -S 0.0.0.0:43180 -t module/issuer module/issuer/router.php
+php -S 0.0.0.0:43180 -t issuer issuer/router.php
 ```
 
 Open [http://127.0.0.1:43180/test-rp.html](http://127.0.0.1:43180/test-rp.html). Demo users: `admin`, `teacher`, `student` / `changeme`.
-
-```bash
-php tests/OidcFlowTest.php
-```
 
 ## Not included
 

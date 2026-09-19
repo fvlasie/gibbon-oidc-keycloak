@@ -1,6 +1,10 @@
 Gibbon OIDC Server
 ==================
 
+v1.0.02
+-------
+Repository root is the Gibbon module (clone into modules/OIDC Server).
+
 v1.0.01
 -------
 Create oidc tables on Gibbon module install (and repair them if the issuer is hit first).

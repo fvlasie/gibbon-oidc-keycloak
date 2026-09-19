@@ -5,7 +5,7 @@ $description = 'Keycloak-shaped OpenID Connect issuer using Gibbon accounts, rol
 $entryURL = 'realm_manage.php';
 $type = 'Additional';
 $category = 'Admin';
-$version = '1.0.01';
+$version = '1.0.02';
 $author = 'Gibbon OIDC Server';
 $url = 'https://gibbonedu.org';
 

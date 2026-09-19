@@ -35,7 +35,7 @@ function boot(): Issuer
             }
         }
     } else {
-        $sqlite = getenv('OIDC_SQLITE') ?: dirname(__DIR__, 2).'/var/oidc.sqlite';
+        $sqlite = getenv('OIDC_SQLITE') ?: dirname(__DIR__).'/var/oidc.sqlite';
         $store = Store::sqlite($sqlite);
         $store->seedStandaloneDemo($publicOrigin.$basePath.'/realms/'.$realm);
     }
