@@ -73,7 +73,7 @@ class Issuer
             $this->logout($method);
             return;
         }
-        if ($path === '/' || $path === '') {
+        if ($path === '/' || $path === '' || $this->isFrontControllerPath($path)) {
             $this->home();
             return;
         }
@@ -83,13 +83,69 @@ class Issuer
 
     private function requestPath(): string
     {
-        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $fromLine = $this->pathFromRequestLine();
+        if ($fromLine !== null) {
+            return $this->stripBasePath($fromLine);
+        }
+
+        $candidates = [
+            $_SERVER['REDIRECT_OIDC_REQUEST_URI'] ?? '',
+            $_SERVER['OIDC_REQUEST_URI'] ?? '',
+            $_SERVER['REQUEST_URI'] ?? '',
+            $_SERVER['REDIRECT_URL'] ?? '',
+            $_SERVER['REDIRECT_REQUEST_URI'] ?? '',
+        ];
+        $uri = '/';
+        foreach ($candidates as $candidate) {
+            $path = $this->normalizePath((string) $candidate);
+            if ($path !== '' && str_contains($path, '/realms/')) {
+                return $this->stripBasePath($path);
+            }
+            if ($uri === '/' && $path !== '') {
+                $uri = $path;
+            }
+        }
+
+        return $this->stripBasePath($uri);
+    }
+
+    private function pathFromRequestLine(): ?string
+    {
+        $line = (string) ($_SERVER['THE_REQUEST'] ?? '');
+        if (!preg_match('#^[A-Z]+\s+(\S+)#', $line, $m)) {
+            return null;
+        }
+        $path = $this->normalizePath($m[1]);
+        if ($path !== '' && str_contains($path, '/realms/')) {
+            return $path;
+        }
+
+        return null;
+    }
+
+    private function normalizePath(string $candidate): string
+    {
+        $path = parse_url($candidate, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            return '';
+        }
+
+        return rawurldecode($path);
+    }
+
+    private function stripBasePath(string $uri): string
+    {
         $prefix = rtrim($this->basePath, '/');
         if ($prefix !== '' && str_starts_with($uri, $prefix)) {
-            $uri = substr($uri, strlen($prefix)) ?: '/';
+            return substr($uri, strlen($prefix)) ?: '/';
         }
 
         return $uri;
+    }
+
+    private function isFrontControllerPath(string $path): bool
+    {
+        return str_contains($path, '/issuer/index.php') || str_ends_with($path, '/issuer');
     }
 
     private function assertRealm(string $name): void
