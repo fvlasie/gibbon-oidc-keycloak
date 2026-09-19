@@ -219,7 +219,7 @@ class Issuer
         $session = $this->currentSession();
         if ($method === 'POST' && isset($_POST['username'], $_POST['password'])) {
             $user = $this->store->findUserByUsername((string) $_POST['username']);
-            if (!$user || ($user['status'] ?? '') !== 'Full' || !password_verify((string) $_POST['password'], $user['passwordStrong'])) {
+            if (!$user || ($user['status'] ?? '') !== 'Full' || !$this->passwordOk($user, (string) $_POST['password'])) {
                 $this->loginForm($params, 'That username or password is not valid, or the account is not Full.');
                 return;
             }
@@ -511,17 +511,30 @@ HTML);
         $q = htmlspecialchars(http_build_query(array_intersect_key($params, array_flip([
             'client_id', 'redirect_uri', 'state', 'scope', 'nonce', 'code_challenge', 'code_challenge_method', 'response_type',
         ]))), ENT_QUOTES);
-        $err = $error !== '' ? '<p class="err">'.htmlspecialchars($error, ENT_QUOTES).'</p>' : '';
+        $err = $error !== '' ? '<div class="alert error">'.htmlspecialchars($error, ENT_QUOTES).'</div>' : '';
+        $continue = $this->continueLabel((string) ($params['redirect_uri'] ?? ''));
         $this->html(<<<HTML
-<h1>Sign in with Gibbon</h1>
-<p>Use your school username and password.</p>
+<h1>Login</h1>
+<p class="lede">Use your Gibbon username and password{$continue}.</p>
 {$err}
 <form method="post" action="?{$q}">
-  <label>Username <input name="username" autocomplete="username" required></label>
-  <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
-  <button type="submit">Sign in</button>
+  <label for="username">Username</label>
+  <input id="username" name="username" autocomplete="username" required autofocus>
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required>
+  <button type="submit">Login</button>
 </form>
 HTML);
+    }
+
+    private function continueLabel(string $redirectUri): string
+    {
+        $host = parse_url($redirectUri, PHP_URL_HOST);
+        if (!is_string($host) || $host === '') {
+            return '';
+        }
+
+        return ' to continue to '.htmlspecialchars($host, ENT_QUOTES);
     }
 
     private function currentSession(): ?array
@@ -560,6 +573,23 @@ HTML);
         }
 
         return preg_split('/\s+/', $raw) ?: [];
+    }
+
+    private function passwordOk(array $user, string $password): bool
+    {
+        $hash = (string) ($user['passwordStrong'] ?? '');
+        if ($hash === '' || $password === '') {
+            return false;
+        }
+        if (password_verify($password, $hash)) {
+            return true;
+        }
+        $salt = (string) ($user['passwordStrongSalt'] ?? '');
+        if ($salt === '') {
+            return false;
+        }
+
+        return hash_equals($hash, hash('sha256', $salt.$password));
     }
 
     private function pkceOk(string $challenge, string $method, string $verifier): bool
@@ -624,24 +654,60 @@ HTML);
 
     private function html(string $body): void
     {
+        $brand = $this->branding();
+        $title = htmlspecialchars($brand['name'].' login', ENT_QUOTES);
+        $name = htmlspecialchars($brand['name'], ENT_QUOTES);
+        $home = htmlspecialchars($brand['home'], ENT_QUOTES);
+        $logo = $brand['logo'] !== ''
+            ? '<img class="logo" src="'.htmlspecialchars($brand['logo'], ENT_QUOTES).'" alt="'.htmlspecialchars($brand['name'], ENT_QUOTES).'">'
+            : '<div class="logo-text">'.$name.'</div>';
         header('Content-Type: text/html; charset=utf-8');
-        echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gibbon sign-in</title><style>
-          :root { font-family: Georgia, serif; color: #1c1917; background: #f5f1ea; }
-          body { max-width: 32rem; margin: 3rem auto; padding: 0 1.25rem; }
-          h1 { font-weight: 600; font-size: 1.6rem; }
-          label { display: block; margin: 0.75rem 0; }
-          input { width: 100%; padding: 0.5rem; font: inherit; }
-          button { margin-top: 0.75rem; padding: 0.5rem 1rem; font: inherit; background: #1e3a5f; color: #fff; border: 0; cursor: pointer; }
-          .err { color: #9f1239; }
-          a { color: #1e3a5f; }
-          code { background: #e7e0d4; padding: 0.1rem 0.3rem; }
-        </style></head><body>'.$body.'</body></html>';
+        echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$title.'</title><style>
+          * { box-sizing: border-box; }
+          body { margin: 0; min-height: 100vh; font-family: "Nunito", "Helvetica Neue", Helvetica, Arial, sans-serif; color: #333; background: linear-gradient(to left top, #402568 2%, #935ee1 65%, #a871ec) no-repeat fixed; }
+          .wrap { max-width: 26rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+          .brand { display: block; margin: 0 0 1.25rem; }
+          .logo { display: block; max-width: 16rem; max-height: 6.25rem; height: auto; }
+          .logo-text { color: #fff; font-size: 1.35rem; font-weight: 700; letter-spacing: .02em; }
+          .card { background: #fff; border-radius: .5rem; box-shadow: 0 10px 25px rgba(64,37,104,.18); padding: 1.5rem 1.6rem 1.75rem; }
+          h1 { margin: 0 0 .5rem; font-size: 1.05rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #444; }
+          .lede { margin: 0 0 1.1rem; font-size: .95rem; color: #555; line-height: 1.45; }
+          label { display: block; margin: .85rem 0 .35rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; color: #555; }
+          input { width: 100%; padding: .55rem .65rem; font: inherit; font-size: 1rem; color: #333; border: 1px solid #ccc; border-radius: .25rem; background: #fff; }
+          input:focus { outline: 2px solid #935ee1; outline-offset: 1px; border-color: #7938c9; }
+          button { display: block; width: 100%; margin-top: 1.15rem; padding: .65rem 1rem; font: inherit; font-size: .95rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #fff; background: #6244bb; border: 0; border-radius: .25rem; cursor: pointer; }
+          button:hover { background: #5138a3; }
+          .alert { margin: 0 0 1rem; padding: .7rem .85rem; border-radius: .25rem; font-size: .9rem; }
+          .alert.error { background: #fde8e8; border: 1px solid #e53e3e; color: #9b2c2c; }
+          a { color: #6244bb; }
+          code { font-size: .85em; background: #f3eefc; padding: .1rem .3rem; border-radius: .2rem; }
+          ul { margin: 0 0 1rem; padding-left: 1.2rem; }
+          .foot { margin: 1.25rem 0 0; text-align: center; font-size: .75rem; color: rgba(255,255,255,.8); }
+          .foot a { color: #fff; }
+        </style></head><body><div class="wrap"><a class="brand" href="'.$home.'">'.$logo.'</a><main class="card">'.$body.'</main><p class="foot">Sign in with your <a href="'.$home.'">'.$name.'</a> account</p></div></body></html>';
     }
 
     private function htmlError(string $message): void
     {
         http_response_code(400);
-        $this->html('<h1>Cannot continue</h1><p>'.htmlspecialchars($message, ENT_QUOTES).'</p>');
+        $this->html('<h1>Cannot continue</h1><div class="alert error">'.htmlspecialchars($message, ENT_QUOTES).'</div>');
+    }
+
+    private function branding(): array
+    {
+        $name = $this->store->getSetting('organisationName') ?? 'Gibbon';
+        $absolute = rtrim((string) ($this->store->getSetting('absoluteURL') ?? ''), '/');
+        $logo = ltrim((string) ($this->store->getSetting('organisationLogo') ?? ''), '/');
+        $logoUrl = '';
+        if ($absolute !== '' && $logo !== '') {
+            $logoUrl = $absolute.'/'.$logo;
+        }
+
+        return [
+            'name' => $name,
+            'home' => $absolute !== '' ? $absolute : $this->issuerUrl(),
+            'logo' => $logoUrl,
+        ];
     }
 
     private function redirectError(string $redirectUri, string $error, string $state, string $desc = ''): void

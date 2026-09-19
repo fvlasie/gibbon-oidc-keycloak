@@ -180,10 +180,25 @@ class Store
         }
     }
 
+    public function getSetting(string $name): ?string
+    {
+        try {
+            $stmt = $this->pdo->prepare('SELECT value FROM gibbonSetting WHERE name = ? LIMIT 1');
+            $stmt->execute([$name]);
+            $row = $stmt->fetch();
+        } catch (PDOException $e) {
+            return null;
+        }
+
+        $value = $row['value'] ?? null;
+
+        return $value !== null && $value !== '' ? (string) $value : null;
+    }
+
     public function findUserByUsername(string $username): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM gibbonPerson WHERE username = ?');
-        $stmt->execute([$username]);
+        $stmt = $this->pdo->prepare('SELECT * FROM gibbonPerson WHERE username = ? OR email = ?');
+        $stmt->execute([$username, $username]);
         $row = $stmt->fetch();
 
         return $row ?: null;
